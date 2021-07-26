@@ -2,13 +2,13 @@ const puppeteer = require("puppeteer");
 const express = require("express");
 const config = require("./config")
 const app = express();
-const port = 8080;
+const port = process.env.PORT || 8080;
 
 app.use(express.json());
 //let url = 'https://www.instagram.com/p/CRxcY6tB0_y/'
-app.listen(process.env.PORT || port, () => console.log(`Listening at http://localhost:${port}`));
+app.listen(port, () => console.log(`Listening at http://localhost:${port}`));
 
-app.get('/url', async (req, res) => {
+app.get('/', async (req, res) => {
     const {post} = req.body;
     console.log('Request Type:', req.method);
     const result = await InstaDl(post)
