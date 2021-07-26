@@ -1,0 +1,14 @@
+{
+    "ignoreHTTPSErrors": true,
+    "headless": true,
+    "args": [
+        "--ignore-certificate-errors",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--aggressive-cache-discard",
+        "--disable-cache",
+        "--disable-application-cache",
+        "--disable-offline-load-stale-cache",
+        "--disk-cache-size=0"
+    ]
+}
