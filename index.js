@@ -3,83 +3,49 @@ const express = require("express");
 const config = require("./config")
 const app = express();
 const port = process.env.PORT || 8080;
+let ws;
 
 app.use(express.json());
-//let url = 'https://www.instagram.com/p/CRxcY6tB0_y/'
+//let url = 'https://www.instagram.com/p/CRxcY6tB0_y/'  https://www.instagram.com/p/CQEUKNtN3Nb/
 app.listen(port, () => console.log(`Listening at http://localhost:${port}`));
 
-app.get('/', async (req, res) => {
-    const {post} = req.body;
-    console.log('Request Type:', req.method);
-    const result = await InstaDl(post)
+app.get('/api', async (req, res) => {
+    const {url} = req.query;
+    console.log(req.params);
+    const result = await InstaDl(url, ws);
     res.status(200).send({
-        url_list: result
+        url_list: result,
+        posts: result.length
     })
-
 })
 
-const InstaDl = async (url) => {
+puppeteer.launch(config).then(browser => {
+    const wsEndpoint = browser.wsEndpoint()
+    ws = wsEndpoint
+})
 
-    const browser = await puppeteer.launch(config);
+const InstaDl = async (url, ws) => {
+    console.log(ws);
+    try{
+        const browser = await puppeteer.connect({browserWSEndpoint: ws}).catch(err => console.log(err))
 
-    const page = await browser.newPage();
-    const downloadUrl = 'https://instaoffline.net/carousel-downloader/?q=' + url;
-    console.log(downloadUrl)
-    await page.goto(downloadUrl);
-    await page.waitForXPath('//*[@id="slick-slide00"]/div/div/a'); //domcontentloaded
-    
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148')
+        const downloadUrl = 'https://instaoffline.net/carousel-downloader/?q=' + url;
+        console.log(downloadUrl)
+        await page.goto(downloadUrl, { waitUntil: 'networkidle0' });
+        
+        const data = await page.evaluate(() => Array.from(document.querySelectorAll('a[class="button"]'), e => e.href));
 
-    const data = await page.evaluate(() => Array.from(document.querySelectorAll('a[tabindex="-1"]'), e => e.href));
-
-    let hrefGot = [];
-    data.forEach(elem => {
-        const noDownload = elem.substring(0, elem.length - 5); //Removes auto download
-        if (!hrefGot.includes(noDownload)) hrefGot.push(noDownload);
-    })
-    console.log(hrefGot);
-    await browser.close();
-    return hrefGot;
-}
-
-/* class InstaScraper {
-    async launch() {
-        this.browser = await puppeteer.launch(options);
-    }
-    
-    async goto(site) {
-        const page = await this.browser.newPage();
-        await page.goto(site);
-        await page.waitForXPath('//*[@id="slick-slide00"]/div/div/a');
-        const data = await page.evaluate(() => Array.from(document.querySelectorAll('a[tabindex="-1"]'), e => e.href));
         let hrefGot = [];
         data.forEach(elem => {
             const noDownload = elem.substring(0, elem.length - 5); //Removes auto download
             if (!hrefGot.includes(noDownload)) hrefGot.push(noDownload);
         })
-        await page.close();
+        console.log(hrefGot);
+        page.close();
         return hrefGot;
+    }catch (err){
+        console.log(err);
     }
-    
-    async close() {
-        await this.browser.close();
-    }
-    }
-
-(async () => {
-    const scraper = new InstaScraper();
-    await scraper.launch();
-  
-
-    app.get('/url', async (req, res) => {
-        const {post} = req.body;
-        const downloadUrl = 'https://instaoffline.net/carousel-downloader/?q=' + post;
-        console.log(post)
-        const result = await scraper.goto(downloadUrl)
-
-        res.status(200).send({
-            url_list: result
-        })
-
-})
-}) */
-
+}
